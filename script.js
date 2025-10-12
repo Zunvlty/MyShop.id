@@ -14,17 +14,17 @@ let products = [
     { id: 12, name: "Network Cable 10m", price: 150000, category: "network", image: "(1) (8).jpg" },
     { id: 13, name: "Mechanical Keyboard", price: 1200000, category: "accessories", image: "(1) (9).jpg" },
     { id: 14, name: "Gaming Mouse", price: 800000, category: "accessories", image: "fantech_x9_macro_gaming_mouse_full04_nlqx68s8.jpg" },
-    { id: 15, name: "Webcam 1080p", price: 900000, category: "accessories", image: "https://via.placeholder.com/300x200?text=1080p+Webcam" },
-    { id: 16, name: "Headset Gaming", price: 1500000, category: "accessories", image: "https://via.placeholder.com/300x200?text=Gaming+Headset" },
-    { id: 17, name: "Mouse Pad XL", price: 250000, category: "accessories", image: "https://via.placeholder.com/300x200?text=XL+Mouse+Pad" },
-    { id: 18, name: "Laptop Stand", price: 400000, category: "accessories", image: "https://via.placeholder.com/300x200?text=Laptop+Stand" },
-    { id: 19, name: "External HDD 2TB", price: 1200000, category: "accessories", image: "https://via.placeholder.com/300x200?text=2TB+HDD" },
-    { id: 20, name: "USB-C Hub", price: 500000, category: "accessories", image: "https://via.placeholder.com/300x200?text=USB-C+Hub" },
-    { id: 21, name: "CPU Cooler", price: 800000, category: "hardware", image: "https://via.placeholder.com/300x200?text=CPU+Cooler" },
-    { id: 22, name: "Thermal Paste", price: 150000, category: "hardware", image: "https://via.placeholder.com/300x200?text=Thermal+Paste" },
-    { id: 23, name: "Ethernet Adapter", price: 300000, category: "network", image: "https://via.placeholder.com/300x200?text=Ethernet+Adapter" },
-    { id: 24, name: "Network Card", price: 600000, category: "network", image: "https://via.placeholder.com/300x200?text=Network+Card" },
-    { id: 25, name: "Cable Manager", price: 100000, category: "accessories", image: "https://via.placeholder.com/300x200?text=Cable+Manager" }
+    { id: 15, name: "Webcam 1080p", price: 900000, category: "accessories", image: "images (1) (10).jpg" },
+    { id: 16, name: "Headset Gaming", price: 1500000, category: "accessories", image: "images (1) (11).jpg" },
+    { id: 17, name: "Mouse Pad XL", price: 250000, category: "accessories", image: "images (1) (12).jpg" },
+    { id: 18, name: "Laptop Stand", price: 400000, category: "accessories", image: "images (1) (13).jpg" },
+    { id: 19, name: "External HDD 2TB", price: 1200000, category: "accessories", image: "402d15df-f619-4ca6-bf91-3b8649857dfd.jpg" },
+    { id: 20, name: "USB-C Hub", price: 500000, category: "accessories", image: "1-39.jpg" },
+    { id: 21, name: "CPU Cooler", price: 800000, category: "hardware", image: "images (1) (14).jpg" },
+    { id: 22, name: "Thermal Paste", price: 150000, category: "hardware", image: "images (1) (15).jpg" },
+    { id: 23, name: "Ethernet Adapter", price: 300000, category: "network", image: "images (1) (16).jpg" },
+    { id: 24, name: "Network Card", price: 600000, category: "network", image: "Network_card.jpg" },
+    { id: 25, name: "Cable Manager", price: 100000, category: "accessories", image: "images (1) (17).jpg" }
 ];
 
 // Data Pengguna
