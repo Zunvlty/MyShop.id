@@ -1,11 +1,11 @@
 // Data Produk
 let products = [
-    { id: 1, name: "Processor Intel i9", price: 5500000, category: "hardware", image: "https://via.placeholder.com/300x200?text=Intel+i9" },
-    { id: 2, name: "Motherboard ASUS", price: 3200000, category: "hardware", image: "https://via.placeholder.com/300x200?text=ASUS+Motherboard" },
-    { id: 3, name: "RAM 32GB DDR4", price: 1800000, category: "hardware", image: "https://via.placeholder.com/300x200?text=32GB+RAM" },
-    { id: 4, name: "SSD NVMe 1TB", price: 1500000, category: "hardware", image: "https://via.placeholder.com/300x200?text=1TB+SSD" },
-    { id: 5, name: "GPU RTX 4080", price: 18500000, category: "hardware", image: "https://via.placeholder.com/300x200?text=RTX+4080" },
-    { id: 6, name: "PSU 850W Gold", price: 2200000, category: "hardware", image: "https://via.placeholder.com/300x200?text=850W+PSU" },
+    { id: 1, name: "Processor Intel i9", price: 5500000, category: "hardware", image: "intel-core-i9-12900k-52-ghz-16c24t-lga-1700-al.jpg" },
+    { id: 2, name: "Motherboard ASUS", price: 3200000, category: "hardware", image: "ROG-Strix-B760-F-Gaming.jpg" },
+    { id: 3, name: "RAM 32GB DDR4", price: 1800000, category: "hardware", image: "images (1) (1).jpg" },
+    { id: 4, name: "SSD NVMe 1TB", price: 1500000, category: "hardware", image: "SSD-m.2-NVMe-1TB-AGi-2280-Gen-4-2.png" },
+    { id: 5, name: "GPU RTX 4080", price: 18500000, category: "hardware", image: "images (1) (2).jpg" },
+    { id: 6, name: "PSU 850W Gold", price: 2200000, category: "hardware", image: "images (1) (3).jpg" },
     { id: 7, name: "Cooler Master Case", price: 1200000, category: "hardware", image: "https://via.placeholder.com/300x200?text=PC+Case" },
     { id: 8, name: "Monitor 27\" 4K", price: 4500000, category: "hardware", image: "https://via.placeholder.com/300x200?text=4K+Monitor" },
     { id: 9, name: "Router Wi-Fi 6", price: 1500000, category: "network", image: "https://via.placeholder.com/300x200?text=Wi-Fi+6+Router" },
