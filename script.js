@@ -752,7 +752,7 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Add to Cart dengan require login
+// PERBAIKAN: Add to Cart dengan quantity management yang benar
 function addToCart(productId) {
     if (!currentUser) {
         showNotification('Silakan login terlebih dahulu untuk menambahkan ke keranjang');
@@ -762,9 +762,24 @@ function addToCart(productId) {
     
     const product = products.find(p => p.id === productId);
     if (product) {
-        cart.push(product);
+        // Cek apakah produk sudah ada di keranjang
+        const existingItemIndex = cart.findIndex(item => item.id === productId);
+        
+        if (existingItemIndex !== -1) {
+            // Jika sudah ada, tambahkan quantity
+            cart[existingItemIndex].quantity = (cart[existingItemIndex].quantity || 1) + 1;
+            showNotification(`${product.name} jumlah ditambahkan (Total: ${cart[existingItemIndex].quantity})`);
+        } else {
+            // Jika belum ada, tambahkan produk dengan quantity 1
+            const productWithQuantity = { 
+                ...product, 
+                quantity: 1 
+            };
+            cart.push(productWithQuantity);
+            showNotification(`${product.name} ditambahkan ke keranjang`);
+        }
+        
         updateCartDisplay();
-        showNotification(`${product.name} ditambahkan ke keranjang`);
         addRecentActivity('cart', `${product.name} ditambahkan ke keranjang`);
     }
 }
@@ -780,7 +795,8 @@ function buyNow(productId) {
     const product = products.find(p => p.id === productId);
     if (product) {
         // Add to cart first
-        cart.push(product);
+        const productWithQuantity = { ...product, quantity: 1 };
+        cart.push(productWithQuantity);
         updateCartDisplay();
         
         // Then show payment modal
@@ -790,8 +806,6 @@ function buyNow(productId) {
         addRecentActivity('sale', `${product.name} akan dibeli seharga Rp ${product.price.toLocaleString('id-ID')}`);
     }
 }
-
-// ... (fungsi-fungsi lainnya seperti showPaymentModal, processPayment, updateCartDisplay, dll. tetap sama)
 
 // Setup Cart Event Listeners
 function setupCartEventListeners() {
@@ -831,52 +845,49 @@ function updateCartDisplay() {
     }
 }
 
-// Update Cart Count
+// PERBAIKAN: Update Cart Count yang akurat
 function updateCartCount() {
-    cartCount.textContent = cart.length;
+    const totalItems = cart.reduce((total, item) => total + (item.quantity || 1), 0);
+    cartCount.textContent = totalItems;
+    
+    // Update badge visibility
+    if (totalItems > 0) {
+        cartCount.style.display = 'flex';
+    } else {
+        cartCount.style.display = 'none';
+    }
 }
 
-// Render Cart Items
+// PERBAIKAN: Render Cart Items dengan struktur yang benar
 function renderCartItems() {
     cartItemsContainer.innerHTML = '';
     
-    // Group items by product id to handle quantities
-    const cartItems = {};
-    
-    cart.forEach(item => {
-        if (cartItems[item.id]) {
-            cartItems[item.id].quantity += 1;
-        } else {
-            cartItems[item.id] = {
-                ...item,
-                quantity: 1
-            };
-        }
-    });
-    
-    // Render each cart item
-    Object.values(cartItems).forEach(item => {
+    cart.forEach((item, index) => {
+        const quantity = item.quantity || 1;
         const cartItemElement = document.createElement('div');
         cartItemElement.className = 'cart-item';
+        cartItemElement.setAttribute('data-index', index);
         cartItemElement.innerHTML = `
             <div class="cart-item-image">
-                <img src="${item.image}" alt="${item.name}">
+                <img src="${item.image}" alt="${item.name}" onerror="this.src='https://via.placeholder.com/80x80?text=No+Image'">
             </div>
             <div class="cart-item-details">
                 <div class="cart-item-name">${item.name}</div>
+                <div class="cart-item-category">${item.category}</div>
                 <div class="cart-item-price">Rp ${item.price.toLocaleString('id-ID')}</div>
+                <div class="cart-item-subtotal">Subtotal: Rp ${(item.price * quantity).toLocaleString('id-ID')}</div>
             </div>
             <div class="cart-item-actions">
                 <div class="quantity-controls">
-                    <button class="quantity-btn decrease-btn" data-id="${item.id}">
+                    <button class="quantity-btn decrease-btn" data-index="${index}" type="button">
                         <i class="fas fa-minus"></i>
                     </button>
-                    <span class="quantity">${item.quantity}</span>
-                    <button class="quantity-btn increase-btn" data-id="${item.id}">
+                    <span class="quantity" data-index="${index}">${quantity}</span>
+                    <button class="quantity-btn increase-btn" data-index="${index}" type="button">
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>
-                <button class="remove-btn" data-id="${item.id}">
+                <button class="remove-btn" data-index="${index}" type="button">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
@@ -889,56 +900,100 @@ function renderCartItems() {
     setupCartItemEventListeners();
 }
 
-// Setup Cart Item Event Listeners dengan event delegation
+// PERBAIKAN: Setup Cart Item Event Listeners dengan event delegation
 function setupCartItemEventListeners() {
     cartItemsContainer.addEventListener('click', function(e) {
-        // Increase quantity
-        if (e.target.classList.contains('increase-btn') || e.target.closest('.increase-btn')) {
-            const button = e.target.classList.contains('increase-btn') ? e.target : e.target.closest('.increase-btn');
-            const productId = parseInt(button.getAttribute('data-id'));
-            addToCart(productId);
+        const target = e.target;
+        
+        // Handle increase button
+        if (target.classList.contains('increase-btn') || target.closest('.increase-btn')) {
+            const button = target.classList.contains('increase-btn') ? target : target.closest('.increase-btn');
+            const itemIndex = parseInt(button.getAttribute('data-index'));
+            if (!isNaN(itemIndex)) {
+                increaseCartQuantity(itemIndex);
+            }
         }
         
-        // Decrease quantity
-        if (e.target.classList.contains('decrease-btn') || e.target.closest('.decrease-btn')) {
-            const button = e.target.classList.contains('decrease-btn') ? e.target : e.target.closest('.decrease-btn');
-            const productId = parseInt(button.getAttribute('data-id'));
-            decreaseCartQuantity(productId);
+        // Handle decrease button
+        else if (target.classList.contains('decrease-btn') || target.closest('.decrease-btn')) {
+            const button = target.classList.contains('decrease-btn') ? target : target.closest('.decrease-btn');
+            const itemIndex = parseInt(button.getAttribute('data-index'));
+            if (!isNaN(itemIndex)) {
+                decreaseCartQuantity(itemIndex);
+            }
         }
         
-        // Remove item
-        if (e.target.classList.contains('remove-btn') || e.target.closest('.remove-btn')) {
-            const button = e.target.classList.contains('remove-btn') ? e.target : e.target.closest('.remove-btn');
-            const productId = parseInt(button.getAttribute('data-id'));
-            removeFromCart(productId);
+        // Handle remove button
+        else if (target.classList.contains('remove-btn') || target.closest('.remove-btn')) {
+            const button = target.classList.contains('remove-btn') ? target : target.closest('.remove-btn');
+            const itemIndex = parseInt(button.getAttribute('data-index'));
+            if (!isNaN(itemIndex)) {
+                removeFromCart(itemIndex);
+            }
         }
     });
 }
 
-// Decrease Cart Quantity
-function decreaseCartQuantity(productId) {
-    const itemIndex = cart.findIndex(item => item.id === productId);
-    if (itemIndex !== -1) {
+// PERBAIKAN: Increase Cart Quantity dengan validasi
+function increaseCartQuantity(itemIndex) {
+    if (cart[itemIndex]) {
+        // Pastikan quantity ada, default 1 jika tidak ada
+        if (!cart[itemIndex].quantity) {
+            cart[itemIndex].quantity = 1;
+        }
+        
+        cart[itemIndex].quantity += 1;
+        updateCartDisplay();
+        showNotification('Jumlah produk ditambahkan');
+    }
+}
+
+// PERBAIKAN: Decrease Cart Quantity dengan validasi - FIXED
+function decreaseCartQuantity(itemIndex) {
+    if (cart[itemIndex]) {
+        // Pastikan quantity ada, default 1 jika tidak ada
+        if (!cart[itemIndex].quantity) {
+            cart[itemIndex].quantity = 1;
+        }
+        
+        const currentQuantity = cart[itemIndex].quantity;
+        
+        if (currentQuantity > 1) {
+            // Kurangi quantity jika lebih dari 1
+            cart[itemIndex].quantity = currentQuantity - 1;
+            updateCartDisplay();
+            showNotification('Jumlah produk dikurangi');
+        } else {
+            // Hapus item jika quantity = 1
+            removeFromCart(itemIndex);
+        }
+    }
+}
+
+// PERBAIKAN: Remove From Cart dengan validasi
+function removeFromCart(itemIndex) {
+    if (cart[itemIndex]) {
+        const productName = cart[itemIndex].name;
         cart.splice(itemIndex, 1);
         updateCartDisplay();
-        showNotification('Jumlah produk dikurangi');
+        showNotification(`${productName} dihapus dari keranjang`);
+        
+        // Tutup modal jika keranjang kosong
+        if (cart.length === 0) {
+            setTimeout(() => {
+                cartModal.classList.remove('active');
+            }, 1000);
+        }
     }
 }
 
-// Remove From Cart
-function removeFromCart(productId) {
-    const product = products.find(p => p.id === productId);
-    if (product) {
-        // Remove all instances of this product from cart
-        cart = cart.filter(item => item.id !== productId);
-        updateCartDisplay();
-        showNotification(`${product.name} dihapus dari keranjang`);
-    }
-}
-
-// Update Cart Total
+// PERBAIKAN: Update Cart Total dengan perhitungan yang benar
 function updateCartTotal() {
-    const total = cart.reduce((sum, item) => sum + item.price, 0);
+    const total = cart.reduce((sum, item) => {
+        const quantity = item.quantity || 1;
+        return sum + (item.price * quantity);
+    }, 0);
+    
     cartTotalAmount.textContent = `Rp ${total.toLocaleString('id-ID')}`;
 }
 
@@ -956,28 +1011,15 @@ function showPaymentModal() {
     paymentItems.innerHTML = '';
     let total = 0;
     
-    // Group items for payment summary
-    const paymentItemsGrouped = {};
-    
     cart.forEach(item => {
-        if (paymentItemsGrouped[item.id]) {
-            paymentItemsGrouped[item.id].quantity += 1;
-        } else {
-            paymentItemsGrouped[item.id] = {
-                ...item,
-                quantity: 1
-            };
-        }
-    });
-    
-    Object.values(paymentItemsGrouped).forEach(item => {
-        const itemTotal = item.price * item.quantity;
+        const quantity = item.quantity || 1;
+        const itemTotal = item.price * quantity;
         const paymentItem = document.createElement('div');
         paymentItem.className = 'payment-item';
         paymentItem.innerHTML = `
             <div>
                 <span>${item.name}</span>
-                ${item.quantity > 1 ? `<small>${item.quantity} x Rp ${item.price.toLocaleString('id-ID')}</small>` : ''}
+                ${quantity > 1 ? `<small>${quantity} x Rp ${item.price.toLocaleString('id-ID')}</small>` : ''}
             </div>
             <span>Rp ${itemTotal.toLocaleString('id-ID')}</span>
         `;
@@ -1000,10 +1042,13 @@ function processPayment() {
     const purchasedItems = [];
     
     cart.forEach(item => {
-        soldProducts.push(item);
-        total += item.price;
-        purchasedItems.push(item.name);
-        addRecentActivity('sale', `${item.name} terjual seharga Rp ${item.price.toLocaleString('id-ID')}`);
+        const quantity = item.quantity || 1;
+        for (let i = 0; i < quantity; i++) {
+            soldProducts.push(item);
+        }
+        total += item.price * quantity;
+        purchasedItems.push(`${item.name}${quantity > 1 ? ` (${quantity}x)` : ''}`);
+        addRecentActivity('sale', `${item.name}${quantity > 1 ? ` (${quantity}x)` : ''} terjual seharga Rp ${(item.price * quantity).toLocaleString('id-ID')}`);
     });
     
     totalRevenue += total;
@@ -1223,4 +1268,28 @@ function showNotification(message) {
             document.body.removeChild(notification);
         }, 300);
     }, 3000);
+}
+
+// HydroTech logo click - mbalek nek menu utama
+const logo = document.querySelector('.logo');
+if (logo) {
+    logo.style.cursor = 'pointer';
+    logo.addEventListener('click', function(e) {
+        // Stop event bubbling
+        e.stopPropagation();
+        e.preventDefault();
+        
+        // Update active nav link
+        navLinks.forEach(nav => nav.classList.remove('active'));
+        const homeLink = document.querySelector('a[href="#home"]');
+        if (homeLink) homeLink.classList.add('active');
+        
+        // Scroll to home section
+        const homeSection = document.getElementById('home');
+        if (homeSection) {
+            homeSection.scrollIntoView({ 
+                behavior: 'smooth' 
+            });
+        }
+    });
 }
