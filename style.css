@@ -1500,3 +1500,132 @@ footer {
         gap: 5px;
     }
 }
+
+/* PERBAIKAN: Styling untuk quantity input */
+.quantity-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--light-color);
+    border-radius: 20px;
+    padding: 5px 12px;
+}
+
+.quantity-input {
+    width: 40px;
+    text-align: center;
+    border: none;
+    background: transparent;
+    font-weight: bold;
+    font-size: 14px;
+    color: var(--dark-color);
+    pointer-events: none; /* Biarkan readonly tapi tetap terlihat baik */
+}
+
+.quantity-btn {
+    background: none;
+    border: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: var(--transition);
+    color: var(--primary-color);
+    background-color: var(--white);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.quantity-btn:hover {
+    background-color: var(--primary-color);
+    color: var(--white);
+    transform: scale(1.1);
+}
+
+.quantity-btn:active {
+    transform: scale(0.95);
+}
+
+/* Pastikan cart item layout tetap rapi */
+.cart-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border-bottom: 1px solid var(--light-color);
+    gap: 15px;
+    transition: var(--transition);
+}
+
+.cart-item:hover {
+    background-color: rgba(30, 110, 167, 0.05);
+}
+
+.cart-item-image {
+    width: 60px;
+    height: 60px;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.cart-item-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.cart-item-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.cart-item-name {
+    font-weight: 600;
+    margin-bottom: 5px;
+    color: var(--dark-color);
+    font-size: 14px;
+}
+
+.cart-item-category {
+    font-size: 12px;
+    color: var(--text-light);
+    margin-bottom: 5px;
+}
+
+.cart-item-price {
+    color: var(--primary-color);
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.cart-item-subtotal {
+    font-size: 12px;
+    color: var(--text-light);
+    margin-top: 5px;
+}
+
+.cart-item-actions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.remove-btn {
+    background: none;
+    border: none;
+    color: #e74c3c;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 4px;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.remove-btn:hover {
+    background-color: #e74c3c;
+    color: var(--white);
+}
