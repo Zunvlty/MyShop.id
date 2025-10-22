@@ -1,6 +1,6 @@
 // Data Produk
 let products = [
-    { id: 1, name: "Processor Intel i9", price: 5500000, category: "hardware", image: "intel-core-i9-12900k-52-ghz-16c24t-lga-1700-al.jpg" },
+    { id:function addToCart 1, name: "Processor Intel i9", price: 5500000, category: "hardware", image: "intel-core-i9-12900k-52-ghz-16c24t-lga-1700-al.jpg" },
     { id: 2, name: "Motherboard ASUS", price: 3200000, category: "hardware", image: "ROG-Strix-B760-F-Gaming.png" },
     { id: 3, name: "RAM 32GB DDR4", price: 1800000, category: "hardware", image: "images (1) (1).jpg" },
     { id: 4, name: "SSD NVMe 1TB", price: 1500000, category: "hardware", image: "SSD-m.2-NVMe-1TB-AGi-2280-Gen-4-2.png" },
@@ -751,8 +751,12 @@ document.addEventListener('click', function(e) {
         buyNow(productId);
     }
 });
+// ... (kode sebelumnya tetap sama sampai bagian cart)
 
-// PERBAIKAN: Add to Cart dengan quantity management yang benar
+// PERBAIKAN TOTAL: Sistem Quantity Counter yang Baru
+let cart = []; // Struktur: { id, name, price, image, category, quantity }
+
+// PERBAIKAN: Add to Cart dengan sistem quantity yang benar
 function addToCart(productId) {
     if (!currentUser) {
         showNotification('Silakan login terlebih dahulu untuk menambahkan ke keranjang');
@@ -767,7 +771,7 @@ function addToCart(productId) {
         
         if (existingItemIndex !== -1) {
             // Jika sudah ada, tambahkan quantity
-            cart[existingItemIndex].quantity = (cart[existingItemIndex].quantity || 1) + 1;
+            cart[existingItemIndex].quantity += 1;
             showNotification(`${product.name} jumlah ditambahkan (Total: ${cart[existingItemIndex].quantity})`);
         } else {
             // Jika belum ada, tambahkan produk dengan quantity 1
@@ -784,89 +788,22 @@ function addToCart(productId) {
     }
 }
 
-// Buy Now dengan require login
-function buyNow(productId) {
-    if (!currentUser) {
-        showNotification('Silakan login terlebih dahulu untuk membeli produk');
-        userLoginModal.classList.add('active');
-        return;
-    }
-    
-    const product = products.find(p => p.id === productId);
-    if (product) {
-        // Add to cart first
-        const productWithQuantity = { ...product, quantity: 1 };
-        cart.push(productWithQuantity);
-        updateCartDisplay();
-        
-        // Then show payment modal
-        showPaymentModal();
-        
-        showNotification(`Lanjutkan pembayaran untuk ${product.name}`);
-        addRecentActivity('sale', `${product.name} akan dibeli seharga Rp ${product.price.toLocaleString('id-ID')}`);
-    }
-}
-
-// Setup Cart Event Listeners
-function setupCartEventListeners() {
-    // Close cart modal
-    closeCartBtn.addEventListener('click', function() {
-        cartModal.classList.remove('active');
-    });
-    
-    // Checkout button
-    checkoutBtn.addEventListener('click', function() {
-        if (cart.length > 0) {
-            cartModal.classList.remove('active');
-            showPaymentModal();
-        }
-    });
-}
-
-// Update cart display to show login prompt when empty and not logged in
-function updateCartDisplay() {
-    updateCartCount();
+// PERBAIKAN: Render Cart Items dengan quantity counter yang benar
+function renderCartItems() {
+    cartItemsContainer.innerHTML = '';
     
     if (cart.length === 0) {
         cartEmpty.style.display = 'block';
         cartSummary.style.display = 'none';
-        cartItemsContainer.innerHTML = '';
-        
-        if (!currentUser) {
-            document.getElementById('loginToShop').style.display = 'block';
-        } else {
-            document.getElementById('loginToShop').style.display = 'none';
-        }
-    } else {
-        cartEmpty.style.display = 'none';
-        cartSummary.style.display = 'block';
-        renderCartItems();
-        updateCartTotal();
+        return;
     }
-}
-
-// PERBAIKAN: Update Cart Count yang akurat
-function updateCartCount() {
-    const totalItems = cart.reduce((total, item) => total + (item.quantity || 1), 0);
-    cartCount.textContent = totalItems;
     
-    // Update badge visibility
-    if (totalItems > 0) {
-        cartCount.style.display = 'flex';
-    } else {
-        cartCount.style.display = 'none';
-    }
-}
-
-// PERBAIKAN: Render Cart Items dengan struktur yang benar
-function renderCartItems() {
-    cartItemsContainer.innerHTML = '';
+    cartEmpty.style.display = 'none';
+    cartSummary.style.display = 'block';
     
     cart.forEach((item, index) => {
-        const quantity = item.quantity || 1;
         const cartItemElement = document.createElement('div');
         cartItemElement.className = 'cart-item';
-        cartItemElement.setAttribute('data-index', index);
         cartItemElement.innerHTML = `
             <div class="cart-item-image">
                 <img src="${item.image}" alt="${item.name}" onerror="this.src='https://via.placeholder.com/80x80?text=No+Image'">
@@ -875,19 +812,19 @@ function renderCartItems() {
                 <div class="cart-item-name">${item.name}</div>
                 <div class="cart-item-category">${item.category}</div>
                 <div class="cart-item-price">Rp ${item.price.toLocaleString('id-ID')}</div>
-                <div class="cart-item-subtotal">Subtotal: Rp ${(item.price * quantity).toLocaleString('id-ID')}</div>
+                <div class="cart-item-subtotal">Subtotal: Rp ${(item.price * item.quantity).toLocaleString('id-ID')}</div>
             </div>
             <div class="cart-item-actions">
                 <div class="quantity-controls">
-                    <button class="quantity-btn decrease-btn" data-index="${index}" type="button">
+                    <button class="quantity-btn decrease-btn" data-id="${item.id}">
                         <i class="fas fa-minus"></i>
                     </button>
-                    <span class="quantity" data-index="${index}">${quantity}</span>
-                    <button class="quantity-btn increase-btn" data-index="${index}" type="button">
+                    <input type="number" class="quantity-input" value="${item.quantity}" min="1" data-id="${item.id}" readonly>
+                    <button class="quantity-btn increase-btn" data-id="${item.id}">
                         <i class="fas fa-plus"></i>
                     </button>
                 </div>
-                <button class="remove-btn" data-index="${index}" type="button">
+                <button class="remove-btn" data-id="${item.id}">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
@@ -896,83 +833,65 @@ function renderCartItems() {
         cartItemsContainer.appendChild(cartItemElement);
     });
     
-    // Add event listeners to cart item buttons menggunakan event delegation
-    setupCartItemEventListeners();
+    // Setup event listeners untuk tombol quantity
+    setupQuantityEventListeners();
 }
 
-// PERBAIKAN: Setup Cart Item Event Listeners dengan event delegation
-function setupCartItemEventListeners() {
-    cartItemsContainer.addEventListener('click', function(e) {
-        const target = e.target;
-        
-        // Handle increase button
-        if (target.classList.contains('increase-btn') || target.closest('.increase-btn')) {
-            const button = target.classList.contains('increase-btn') ? target : target.closest('.increase-btn');
-            const itemIndex = parseInt(button.getAttribute('data-index'));
-            if (!isNaN(itemIndex)) {
-                increaseCartQuantity(itemIndex);
-            }
-        }
-        
-        // Handle decrease button
-        else if (target.classList.contains('decrease-btn') || target.closest('.decrease-btn')) {
-            const button = target.classList.contains('decrease-btn') ? target : target.closest('.decrease-btn');
-            const itemIndex = parseInt(button.getAttribute('data-index'));
-            if (!isNaN(itemIndex)) {
-                decreaseCartQuantity(itemIndex);
-            }
-        }
-        
-        // Handle remove button
-        else if (target.classList.contains('remove-btn') || target.closest('.remove-btn')) {
-            const button = target.classList.contains('remove-btn') ? target : target.closest('.remove-btn');
-            const itemIndex = parseInt(button.getAttribute('data-index'));
-            if (!isNaN(itemIndex)) {
-                removeFromCart(itemIndex);
-            }
-        }
+// PERBAIKAN: Setup event listeners untuk quantity controls
+function setupQuantityEventListeners() {
+    // Increase quantity
+    document.querySelectorAll('.increase-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const productId = parseInt(this.getAttribute('data-id'));
+            increaseQuantity(productId);
+        });
+    });
+    
+    // Decrease quantity
+    document.querySelectorAll('.decrease-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const productId = parseInt(this.getAttribute('data-id'));
+            decreaseQuantity(productId);
+        });
+    });
+    
+    // Remove item
+    document.querySelectorAll('.remove-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const productId = parseInt(this.getAttribute('data-id'));
+            removeItem(productId);
+        });
     });
 }
 
-// PERBAIKAN: Increase Cart Quantity dengan validasi
-function increaseCartQuantity(itemIndex) {
-    if (cart[itemIndex]) {
-        // Pastikan quantity ada, default 1 jika tidak ada
-        if (!cart[itemIndex].quantity) {
-            cart[itemIndex].quantity = 1;
-        }
-        
+// PERBAIKAN: Increase quantity function
+function increaseQuantity(productId) {
+    const itemIndex = cart.findIndex(item => item.id === productId);
+    if (itemIndex !== -1) {
         cart[itemIndex].quantity += 1;
         updateCartDisplay();
         showNotification('Jumlah produk ditambahkan');
     }
 }
 
-// PERBAIKAN: Decrease Cart Quantity dengan validasi - FIXED
-function decreaseCartQuantity(itemIndex) {
-    if (cart[itemIndex]) {
-        // Pastikan quantity ada, default 1 jika tidak ada
-        if (!cart[itemIndex].quantity) {
-            cart[itemIndex].quantity = 1;
-        }
-        
-        const currentQuantity = cart[itemIndex].quantity;
-        
-        if (currentQuantity > 1) {
-            // Kurangi quantity jika lebih dari 1
-            cart[itemIndex].quantity = currentQuantity - 1;
+// PERBAIKAN: Decrease quantity function
+function decreaseQuantity(productId) {
+    const itemIndex = cart.findIndex(item => item.id === productId);
+    if (itemIndex !== -1) {
+        if (cart[itemIndex].quantity > 1) {
+            cart[itemIndex].quantity -= 1;
             updateCartDisplay();
             showNotification('Jumlah produk dikurangi');
         } else {
-            // Hapus item jika quantity = 1
-            removeFromCart(itemIndex);
+            removeItem(productId);
         }
     }
 }
 
-// PERBAIKAN: Remove From Cart dengan validasi
-function removeFromCart(itemIndex) {
-    if (cart[itemIndex]) {
+// PERBAIKAN: Remove item function
+function removeItem(productId) {
+    const itemIndex = cart.findIndex(item => item.id === productId);
+    if (itemIndex !== -1) {
         const productName = cart[itemIndex].name;
         cart.splice(itemIndex, 1);
         updateCartDisplay();
@@ -987,20 +906,29 @@ function removeFromCart(itemIndex) {
     }
 }
 
-// PERBAIKAN: Update Cart Total dengan perhitungan yang benar
-function updateCartTotal() {
-    const total = cart.reduce((sum, item) => {
-        const quantity = item.quantity || 1;
-        return sum + (item.price * quantity);
-    }, 0);
-    
-    cartTotalAmount.textContent = `Rp ${total.toLocaleString('id-ID')}`;
+// PERBAIKAN: Update cart display
+function updateCartDisplay() {
+    updateCartCount();
+    renderCartItems();
+    updateCartTotal();
 }
 
-// Show Cart Modal
-function showCartModal() {
-    updateCartDisplay();
-    cartModal.classList.add('active');
+// PERBAIKAN: Update cart count
+function updateCartCount() {
+    const totalItems = cart.reduce((total, item) => total + item.quantity, 0);
+    cartCount.textContent = totalItems;
+    
+    if (totalItems > 0) {
+        cartCount.style.display = 'flex';
+    } else {
+        cartCount.style.display = 'none';
+    }
+}
+
+// PERBAIKAN: Update cart total
+function updateCartTotal() {
+    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    cartTotalAmount.textContent = `Rp ${total.toLocaleString('id-ID')}`;
 }
 
 // Show Payment Modal
