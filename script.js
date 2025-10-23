@@ -43,6 +43,32 @@ let soldProducts = [];
 let totalRevenue = 0;
 let recentActivities = [];
 
+const GOOGLE_SCRIPT_URL = "PASTE_WEB_APP_URL_KAMU";
+
+let firebaseInitialized = false;
+let db = null;
+let storage = null;
+
+if (typeof firebase !== "undefined" && !firebaseInitialized) {
+    try {
+        const firebaseConfig = {
+            apiKey: "AIzaSyDH3T3sqPnLId0ah8CeF7-qfS64droz95M",
+            authDomain: "PROJECT_ID.firebaseapp.com",
+            projectId: "hydrotech-ba009",
+            storageBucket: "PROJECT_ID.appspot.com",
+            messagingSenderId: "1015497585103",
+            appId: "1:1015497585103:web:7f1d2a99755de36a5662ba"
+        };
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        storage = firebase.storage();
+        firebaseInitialized = true;
+    } catch (e) {
+        firebaseInitialized = false;
+    }
+}
+
+// DOM Elements
 const userLoginModal = document.getElementById('userLoginModal');
 const userRegisterModal = document.getElementById('userRegisterModal');
 const userLoginBtn = document.getElementById('userLoginBtn');
@@ -72,7 +98,6 @@ const closeRegister = document.querySelector('.close-register');
 
 const navLinks = document.querySelectorAll('.nav-link');
 const sections = document.querySelectorAll('.section');
-const categoryBtns = document.querySelectorAll('.category-btn');
 const productsGrid = document.getElementById('products-grid');
 const recommendedProducts = document.getElementById('recommended-products');
 const devPanel = document.getElementById('devPanel');
@@ -102,7 +127,9 @@ const cartSummary = document.getElementById('cart-summary');
 const cartTotalAmount = document.getElementById('cart-total-amount');
 const checkoutBtn = document.getElementById('checkout-btn');
 
+// Initialize everything when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing application...');
     setupLoginSystem();
     setupCartEventListeners();
     updateCartDisplay();
@@ -116,8 +143,9 @@ document.addEventListener('DOMContentLoaded', function() {
     setupScrollAnimations();
     initializeChart();
     setupParallax();
-    setupCategoryFilter();
+    setupCategoryFilter(); // Pastikan ini dipanggil
     checkExistingLogin();
+    if (firebaseInitialized) setupRealtimeSalesListener();
 });
 
 function setupLoginSystem() {
@@ -185,114 +213,61 @@ function setupLoginSystem() {
     });
 }
 
-function loginCustomer(email, password) {
-    const user = users.find(u => u.email === email && u.password === password);
-    if (user) {
-        currentUser = user;
-        if (userLoginModal) userLoginModal.classList.remove('active');
-        updateUIAfterLogin();
-        showNotification(`Selamat datang, ${user.name}!`);
-        addRecentActivity('user', `${user.name} login sebagai pembeli`);
-        localStorage.setItem('currentUser', JSON.stringify(user));
+// PERBAIKAN UTAMA: Setup Category Filter yang sederhana dan efektif
+function setupCategoryFilter() {
+    console.log('Setting up category filters...');
+    
+    // Gunakan event delegation pada container category filter
+    const categoryFilter = document.querySelector('.category-filter');
+    
+    if (categoryFilter) {
+        categoryFilter.addEventListener('click', function(e) {
+            // Cek jika yang diklik adalah category-btn
+            if (e.target.classList.contains('category-btn')) {
+                e.preventDefault();
+                const category = e.target.getAttribute('data-category');
+                console.log('Category button clicked:', category);
+                
+                // Remove active class from all buttons
+                document.querySelectorAll('.category-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    btn.classList.remove('filter-active');
+                });
+                
+                // Add active classes to clicked button
+                e.target.classList.add('active');
+                e.target.classList.add('filter-active');
+                
+                // Filter products
+                filterProductsByCategory(category);
+            }
+        });
     } else {
-        alert('Email atau password salah!');
+        console.error('Category filter container not found!');
     }
 }
 
-function loginAdmin(username, password) {
-    const admin = admins.find(a => a.username === username && a.password === password);
-    if (admin) {
-        currentAdmin = admin;
-        if (userLoginModal) userLoginModal.classList.remove('active');
-        if (devPanel) devPanel.classList.add('active');
-        populateProductSelect();
-        updateAdminWelcome(admin.name);
-        showNotification(`Selamat datang, ${admin.name}!`);
-        addRecentActivity('system', `${admin.name} login sebagai admin`);
-        adminAccessBtn.style.display = 'block';
-        localStorage.setItem('currentAdmin', JSON.stringify(admin));
-    } else alert('Username atau password admin salah!');
-}
-
-function registerCustomer() {
-    const name = document.getElementById('registerName').value;
-    const email = document.getElementById('registerEmail').value;
-    const phone = document.getElementById('registerPhone').value;
-    const password = document.getElementById('registerPassword').value;
-    const confirmPassword = document.getElementById('registerConfirmPassword').value;
-    if (password !== confirmPassword) { alert('Password dan konfirmasi password tidak cocok!'); return; }
-    if (users.find(u => u.email === email)) { alert('Email sudah terdaftar!'); return; }
-    const newUser = { id: users.length + 1, name, email, password, phone, joinDate: new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long' }) };
-    users.push(newUser);
-    userRegisterModal.classList.remove('active');
-    userLoginModal.classList.add('active');
-    showNotification('Pendaftaran berhasil! Silakan login.');
-}
-
-function simulateGoogleLogin(type) {
-    const fakeUsers = [{ name: "Google User", email: "google.user@example.com" }, { name: "Test User", email: "test.user@example.com" }, { name: "Demo User", email: "demo.user@example.com" }];
-    const fakeAdmins = [{ name: "Google Admin", email: "admin@hydrotech.com" }, { name: "System Admin", email: "system@hydrotech.com" }];
-    const randomUser = fakeUsers[Math.floor(Math.random() * fakeUsers.length)];
-    const randomAdmin = fakeAdmins[Math.floor(Math.random() * fakeAdmins.length)];
-    if (type === 'customer') {
-        let user = users.find(u => u.email === randomUser.email);
-        if (!user) { user = { id: users.length + 1, name: randomUser.name, email: randomUser.email, password: 'google123', phone: '+62 812-3456-7890', joinDate: new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long' }) }; users.push(user); }
-        currentUser = user;
-        userLoginModal.classList.remove('active');
-        updateUIAfterLogin();
-        showNotification(`Selamat datang, ${user.name}!`);
-        addRecentActivity('user', `${user.name} login dengan Google`);
-        localStorage.setItem('currentUser', JSON.stringify(user));
+function filterProductsByCategory(category) {
+    console.log('Filtering products by category:', category);
+    
+    let filteredProducts = [];
+    
+    if (category === 'all') {
+        filteredProducts = products;
     } else {
-        currentAdmin = { username: 'google.admin', name: randomAdmin.name };
-        userLoginModal.classList.remove('active');
-        devPanel.classList.add('active');
-        populateProductSelect();
-        updateAdminWelcome(randomAdmin.name);
-        showNotification(`Selamat datang, ${randomAdmin.name}!`);
-        addRecentActivity('system', `${randomAdmin.name} login dengan Google`);
-        adminAccessBtn.style.display = 'block';
-        localStorage.setItem('currentAdmin', JSON.stringify({ username: 'google.admin', name: randomAdmin.name }));
+        filteredProducts = products.filter(product => product.category === category);
     }
-}
-
-function updateUIAfterLogin() {
-    if (currentUser) {
-        if (userLoginBtn) userLoginBtn.style.display = 'none';
-        if (userInfo) userInfo.style.display = 'flex';
-        if (userGreeting) userGreeting.textContent = `Halo, ${currentUser.name.split(' ')[0]}!`;
-        updateUserProfile();
+    
+    console.log(`Found ${filteredProducts.length} products for category: ${category}`);
+    displayProducts(filteredProducts, productsGrid);
+    
+    // Add animation effect
+    if (productsGrid) {
+        productsGrid.classList.add('filtering');
+        setTimeout(() => {
+            productsGrid.classList.remove('filtering');
+        }, 300);
     }
-}
-
-function updateAdminWelcome(name) {
-    const el = document.getElementById('adminWelcome');
-    if (el) el.textContent = `Selamat Datang, ${name}!`;
-}
-
-function logoutCustomer() {
-    currentUser = null;
-    if (userInfo) userInfo.style.display = 'none';
-    if (userLoginBtn) userLoginBtn.style.display = 'block';
-    cart = [];
-    updateCartDisplay();
-    showNotification('Anda telah logout');
-    localStorage.removeItem('currentUser');
-}
-
-function logoutAdmin() {
-    currentAdmin = null;
-    if (devPanel) devPanel.classList.remove('active');
-    if (adminAccessBtn) adminAccessBtn.style.display = 'none';
-    showNotification('Admin telah logout');
-    localStorage.removeItem('currentAdmin');
-}
-
-function checkExistingLogin() {
-    const savedUser = localStorage.getItem('currentUser');
-    const savedAdmin = localStorage.getItem('currentAdmin');
-    if (savedUser) { currentUser = JSON.parse(savedUser); updateUIAfterLogin(); }
-    if (savedAdmin) { currentAdmin = JSON.parse(savedAdmin); adminAccessBtn.style.display = 'block'; updateAdminWelcome(currentAdmin.name); }
 }
 
 function setupEventListeners() {
@@ -341,24 +316,6 @@ function setupParallax() {
     });
 }
 
-function setupCategoryFilter() {
-    categoryBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
-            const category = this.getAttribute('data-category');
-            categoryBtns.forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            filterProductsByCategory(category);
-        });
-    });
-}
-
-function filterProductsByCategory(category) {
-    let filtered;
-    if (category === 'all') filtered = products;
-    else filtered = products.filter(p => p.category === category);
-    displayProducts(filtered, productsGrid);
-}
-
 function setupTouchEvents() {
     const buttons = document.querySelectorAll('button, .nav-link, .product-card');
     buttons.forEach(button => {
@@ -368,9 +325,21 @@ function setupTouchEvents() {
 }
 
 function displayProducts(productsArray, container) {
-    if (!container) return;
+    if (!container) {
+        console.error('Container not found!');
+        return;
+    }
+    
     container.innerHTML = '';
-    if (!productsArray || productsArray.length === 0) { container.innerHTML = '<p class="no-products">Tidak ada produk dalam kategori ini</p>'; return; }
+    
+    if (!productsArray || productsArray.length === 0) { 
+        container.innerHTML = '<p class="no-products">Tidak ada produk dalam kategori ini</p>'; 
+        console.log('No products to display');
+        return; 
+    }
+    
+    console.log(`Displaying ${productsArray.length} products in container:`, container.id);
+    
     productsArray.forEach((product, index) => {
         const productCard = document.createElement('div');
         productCard.className = 'product-card';
@@ -392,12 +361,16 @@ function displayProducts(productsArray, container) {
         container.appendChild(productCard);
     });
 
+    // Add fade-in animation after a short delay
     setTimeout(() => {
         const productCards = container.querySelectorAll('.product-card');
-        productCards.forEach(card => { if (isElementInViewport(card)) card.classList.add('fade-in'); });
+        productCards.forEach(card => { 
+            if (isElementInViewport(card)) card.classList.add('fade-in'); 
+        });
     }, 100);
 }
 
+// Event delegation for product actions
 document.addEventListener('click', function(e) {
     if (e.target.classList.contains('add-to-cart') || e.target.closest('.add-to-cart')) {
         const btn = e.target.classList.contains('add-to-cart') ? e.target : e.target.closest('.add-to-cart');
@@ -412,11 +385,16 @@ document.addEventListener('click', function(e) {
 });
 
 function buyNow(productId) {
-    if (!currentUser) { showNotification('Silakan login terlebih dahulu untuk membeli produk'); userLoginModal.classList.add('active'); return; }
+    if (!currentUser) { 
+        showNotification('Silakan login terlebih dahulu untuk membeli produk'); 
+        userLoginModal.classList.add('active'); 
+        return; 
+    }
     const product = products.find(p => p.id === productId);
     if (!product) return;
     const existing = cart.find(i => i.id === productId);
-    if (existing) existing.quantity += 1; else cart.push({ ...product, quantity: 1 });
+    if (existing) existing.quantity += 1; 
+    else cart.push({ ...product, quantity: 1 });
     updateCartDisplay();
     showPaymentModal();
     showNotification(`Lanjutkan pembayaran untuk ${product.name}`);
@@ -424,7 +402,11 @@ function buyNow(productId) {
 }
 
 function addToCart(productId) {
-    if (!currentUser) { showNotification('Silakan login terlebih dahulu untuk menambahkan ke keranjang'); userLoginModal.classList.add('active'); return; }
+    if (!currentUser) { 
+        showNotification('Silakan login terlebih dahulu untuk menambahkan ke keranjang'); 
+        userLoginModal.classList.add('active'); 
+        return; 
+    }
     const product = products.find(p => p.id === productId);
     if (!product) return;
     const existing = cart.find(item => item.id === productId);
@@ -485,7 +467,11 @@ function setupQuantityEventListeners() {
         btn.onclick = () => {
             const productId = parseInt(btn.getAttribute('data-id'));
             const idx = cart.findIndex(i => i.id === productId);
-            if (idx !== -1) { cart[idx].quantity += 1; updateCartDisplay(); showNotification('Jumlah produk ditambahkan'); }
+            if (idx !== -1) { 
+                cart[idx].quantity += 1; 
+                updateCartDisplay(); 
+                showNotification('Jumlah produk ditambahkan'); 
+            }
         };
     });
 
@@ -494,8 +480,14 @@ function setupQuantityEventListeners() {
             const productId = parseInt(btn.getAttribute('data-id'));
             const idx = cart.findIndex(i => i.id === productId);
             if (idx === -1) return;
-            if (cart[idx].quantity > 1) { cart[idx].quantity -= 1; updateCartDisplay(); showNotification('Jumlah produk dikurangi'); }
-            else { removeItem(productId); }
+            if (cart[idx].quantity > 1) { 
+                cart[idx].quantity -= 1; 
+                updateCartDisplay(); 
+                showNotification('Jumlah produk dikurangi'); 
+            }
+            else { 
+                removeItem(productId); 
+            }
         };
     });
 
@@ -514,7 +506,9 @@ function removeItem(productId) {
         cart.splice(idx, 1);
         updateCartDisplay();
         showNotification(`${name} dihapus dari keranjang`);
-        if (cart.length === 0) setTimeout(() => { if (cartModal) cartModal.classList.remove('active'); }, 800);
+        if (cart.length === 0) setTimeout(() => { 
+            if (cartModal) cartModal.classList.remove('active'); 
+        }, 800);
     }
 }
 
@@ -538,9 +532,14 @@ function updateCartTotal() {
 }
 
 function setupCartEventListeners() {
-    if (closeCartBtn) closeCartBtn.addEventListener('click', function() { if (cartModal) cartModal.classList.remove('active'); });
+    if (closeCartBtn) closeCartBtn.addEventListener('click', function() { 
+        if (cartModal) cartModal.classList.remove('active'); 
+    });
     if (checkoutBtn) checkoutBtn.addEventListener('click', function() {
-        if (cart.length > 0) { if (cartModal) cartModal.classList.remove('active'); showPaymentModal(); }
+        if (cart.length > 0) { 
+            if (cartModal) cartModal.classList.remove('active'); 
+            showPaymentModal(); 
+        }
     });
 }
 
@@ -571,30 +570,85 @@ function showPaymentModal() {
     paymentModal.classList.add('active');
 }
 
-function processPayment() {
-    if (cart.length === 0) { showNotification('Keranjang belanja kosong'); return; }
+async function processPayment() {
+    if (cart.length === 0) { 
+        showNotification('Keranjang belanja kosong'); 
+        return; 
+    }
     let total = 0;
     const purchasedItems = [];
-    cart.forEach(item => {
+    const buyerName = currentUser?.name || "Guest";
+    const buyerEmail = currentUser?.email || "guest@example.com";
+    
+    for (const item of cart) {
         const qty = item.quantity || 1;
-        for (let i = 0; i < qty; i++) soldProducts.push(item);
-        total += item.price * qty;
+        const subtotal = item.price * qty;
+        total += subtotal;
         purchasedItems.push(`${item.name}${qty>1?` (${qty}x)`:''}`);
         addRecentActivity('sale', `${item.name}${qty>1?` (${qty}x)`:''} terjual seharga Rp ${(item.price*qty).toLocaleString('id-ID')}`);
-    });
+        
+        if (firebaseInitialized && db) {
+            try {
+                await db.collection('sales').add({
+                    productName: item.name,
+                    price: item.price,
+                    quantity: qty,
+                    subtotal,
+                    buyerName,
+                    buyerEmail,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch (e) {
+                console.error('Error saving sale to Firebase:', e);
+            }
+        }
+        
+        const payload = {
+            productName: item.name,
+            price: item.price,
+            buyerName,
+            buyerEmail,
+            quantity: qty,
+            total: subtotal,
+            paymentMethod: "Manual Transfer"
+        };
+        
+        try {
+            if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== "PASTE_WEB_APP_URL_KAMU") {
+                await fetch(GOOGLE_SCRIPT_URL, {
+                    method: "POST",
+                    body: JSON.stringify(payload),
+                    headers: { "Content-Type": "application/json" }
+                });
+            }
+        } catch (e) {
+            console.error('Error sending data to Google Script:', e);
+        }
+    }
+    
     totalRevenue += total;
     cart = [];
     updateCartDisplay();
     updateDashboard();
     paymentModal.classList.remove('active');
-    const itemsList = purchasedItems.slice(0,3).join(', ');
     showNotification(`Pembayaran berhasil! Total: Rp ${total.toLocaleString('id-ID')}`);
     updateChart();
 }
 
 function addRecentActivity(type, message) {
-    const activities = { 'cart': { icon: 'fas fa-shopping-cart', color: '#3498db' }, 'sale': { icon: 'fas fa-dollar-sign', color: '#2ecc71' }, 'user': { icon: 'fas fa-user', color: '#9b59b6' }, 'system': { icon: 'fas fa-cog', color: '#f39c12' } };
-    const activity = { type, message, icon: activities[type]?.icon || 'fas fa-info-circle', color: activities[type]?.color || '#7f8c8d', timestamp: new Date().toLocaleTimeString('id-ID') };
+    const activities = { 
+        'cart': { icon: 'fas fa-shopping-cart', color: '#3498db' }, 
+        'sale': { icon: 'fas fa-dollar-sign', color: '#2ecc71' }, 
+        'user': { icon: 'fas fa-user', color: '#9b59b6' }, 
+        'system': { icon: 'fas fa-cog', color: '#f39c12' } 
+    };
+    const activity = { 
+        type, 
+        message, 
+        icon: activities[type]?.icon || 'fas fa-info-circle', 
+        color: activities[type]?.color || '#7f8c8d', 
+        timestamp: new Date().toLocaleTimeString('id-ID') 
+    };
     recentActivities.unshift(activity);
     if (recentActivities.length > 5) recentActivities.pop();
     updateRecentActivities();
@@ -607,7 +661,15 @@ function updateRecentActivities() {
     recentActivities.forEach(act => {
         const item = document.createElement('div');
         item.className = 'activity-item';
-        item.innerHTML = `<div class="activity-icon" style="background-color: ${act.color}20; color: ${act.color}"><i class="${act.icon}"></i></div><div class="activity-details"><h4>${act.message}</h4><p>${act.timestamp}</p></div>`;
+        item.innerHTML = `
+            <div class="activity-icon" style="background-color: ${act.color}20; color: ${act.color}">
+                <i class="${act.icon}"></i>
+            </div>
+            <div class="activity-details">
+                <h4>${act.message}</h4>
+                <p>${act.timestamp}</p>
+            </div>
+        `;
         activitiesContainer.appendChild(item);
     });
 }
@@ -655,6 +717,38 @@ function updateChart() {
     window.salesChart.update();
 }
 
+function setupRealtimeSalesListener() {
+    if (!firebaseInitialized || !db) return;
+    try {
+        db.collection('sales').orderBy('createdAt', 'asc').onSnapshot(snapshot => {
+            const sales = [];
+            snapshot.forEach(doc => {
+                const d = doc.data();
+                const ts = d.createdAt && d.createdAt.toDate ? d.createdAt.toDate() : new Date();
+                sales.push({ ...d, createdAt: ts });
+            });
+            const labels = [];
+            const data = [];
+            const grouped = {};
+            sales.forEach(s => {
+                const key = `${s.createdAt.getFullYear()}-${String(s.createdAt.getMonth()+1).padStart(2,'0')}`;
+                grouped[key] = (grouped[key] || 0) + (s.subtotal || (s.price * s.quantity || 0));
+            });
+            const keys = Object.keys(grouped).sort();
+            keys.forEach(k => {
+                labels.push(k);
+                data.push(Math.round(grouped[k]/1000000));
+            });
+            if (window.salesChart) {
+                window.salesChart.data.labels = labels.length ? labels : window.salesChart.data.labels;
+                if (labels.length) window.salesChart.data.datasets[0].data = data;
+                window.salesChart.update();
+            }
+        });
+    } catch (e) {
+    }
+}
+
 function startQuotesSlider() {
     const quotes = document.querySelectorAll('.quote');
     if (!quotes || quotes.length === 0) return;
@@ -667,7 +761,10 @@ function startQuotesSlider() {
 }
 
 function setupDeveloperPanel() {
-    if (closeDevPanelBtn) closeDevPanelBtn.addEventListener('click', function() { if (devPanel) devPanel.classList.remove('active'); });
+    if (closeDevPanelBtn) closeDevPanelBtn.addEventListener('click', function() { 
+        if (devPanel) devPanel.classList.remove('active'); 
+    });
+    
     if (updatePriceBtn) updatePriceBtn.addEventListener('click', function() {
         const selectedProductId = parseInt(productSelect.value);
         const newPrice = parseInt(newPriceInput.value);
@@ -683,29 +780,125 @@ function setupDeveloperPanel() {
             }
         }
     });
-    if (addProductForm) addProductForm.addEventListener('submit', function(e) {
+    
+    // Setup image preview
+    const imageInput = document.getElementById('newProductImage');
+    const imagePreview = document.getElementById('imagePreview');
+    const previewImage = document.getElementById('previewImage');
+    
+    if (imageInput) {
+        imageInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                    imagePreview.style.display = 'block';
+                }
+                reader.readAsDataURL(file);
+            } else {
+                imagePreview.style.display = 'none';
+            }
+        });
+    }
+    
+    if (addProductForm) addProductForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         const name = document.getElementById('newProductName').value;
         const price = parseInt(document.getElementById('newProductPrice').value);
         const category = document.getElementById('newProductCategory').value;
-        const image = document.getElementById('newProductImage').value;
+        const imageInput = document.getElementById('newProductImage');
+        
+        // Validasi kategori
+        if (!category) {
+            showNotification('Silakan pilih kategori produk');
+            return;
+        }
+        
+        let image = '';
+        
+        // Handle file upload
+        if (imageInput && imageInput.files && imageInput.files[0]) {
+            const file = imageInput.files[0];
+            
+            // Simulate file upload - in real implementation, you would upload to server
+            // For now, we'll create a blob URL for demonstration
+            image = URL.createObjectURL(file);
+            
+            // If Firebase is available, you can upload to Firebase Storage
+            if (firebaseInitialized && storage) {
+                try {
+                    const storageRef = storage.ref().child(`products/${Date.now()}_${file.name}`);
+                    await storageRef.put(file);
+                    image = await storageRef.getDownloadURL();
+                } catch (e) {
+                    console.error('Error uploading image:', e);
+                    // Fallback to blob URL
+                    image = URL.createObjectURL(file);
+                }
+            }
+        } else {
+            showNotification('Silakan pilih gambar produk');
+            return;
+        }
+        
         if (name && price && category && image) {
-            const newProduct = { id: products.length + 1, name, price, category, image };
+            // Save to Firebase if available
+            if (firebaseInitialized && db) {
+                try {
+                    await db.collection('products').add({ 
+                        name, 
+                        price, 
+                        category, 
+                        image,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                } catch (e) {
+                    console.error('Error saving product to Firebase:', e);
+                }
+            }
+            
+            // Add to local products array
+            const newProduct = { 
+                id: products.length + 1, 
+                name, 
+                price, 
+                category, 
+                image 
+            };
             products.push(newProduct);
+            
+            // Update UI
             displayProducts(products, productsGrid);
             populateProductSelect();
             addProductForm.reset();
+            
+            // Reset image preview
+            if (imagePreview) imagePreview.style.display = 'none';
+            if (previewImage) previewImage.src = '';
+            
             showNotification(`Produk ${name} berhasil ditambahkan`);
-            addRecentActivity('system', `Produk baru ${name} ditambahkan`);
+            addRecentActivity('system', `Produk baru ${name} ditambahkan ke kategori ${category}`);
             updateDashboard();
         }
     });
+    
     populateProductSelect();
 }
 
 function populateProductSelect() {
     if (!productSelect) return;
     productSelect.innerHTML = '';
+    
+    // Add default option
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Pilih Produk';
+    defaultOption.disabled = true;
+    defaultOption.selected = true;
+    productSelect.appendChild(defaultOption);
+    
+    // Add product options
     products.forEach(p => {
         const opt = document.createElement('option');
         opt.value = p.id;
@@ -774,3 +967,18 @@ if (logo) {
         if (homeSection) homeSection.scrollIntoView({ behavior: 'smooth' });
     });
 }
+
+// Fungsi bantuan untuk debug
+function debugCategories() {
+    console.log('=== DEBUG CATEGORIES ===');
+    console.log('Total products:', products.length);
+    const categories = {};
+    products.forEach(p => {
+        if (!categories[p.category]) categories[p.category] = 0;
+        categories[p.category]++;
+    });
+    console.log('Products by category:', categories);
+}
+
+// Panggil debug function
+setTimeout(debugCategories, 1000);
